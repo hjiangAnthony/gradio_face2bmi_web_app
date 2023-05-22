@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from models_conv import *
+from models_base import *
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -22,8 +22,8 @@ current_directory = os.getcwd()
 all_images_path = '.'
 
 # get model directory
-model_name = '0520_saved_model_full_sample_uniPredict_vgg16_base_extra_cov_layer.h5'
-#model_name = '0520_saved_model_full_sample_uniPredict_vgg16_base_no_layer.h5'
+#model_name = '0520_saved_model_full_sample_uniPredict_vgg16_base_extra_cov_layer.h5'
+model_name = '0520_saved_model_full_sample_uniPredict_vgg16_base_no_layer.h5'
 
 model_folder = 'models'
 model_path = os.path.join(current_directory, model_folder, model_name)
@@ -48,7 +48,7 @@ def model_init():
     # use our own load model function to load
     model.load_weights(model_path)
     return model
-    
+
 def model_predict_bmi(tmp_img_path):
 
     model = model_init()
@@ -90,7 +90,7 @@ def main(tmp_img_path):
     bmi_result = model_predict_bmi(tmp_img_path)
     health_advice = give_advice(bmi_result)
     return health_advice
-    
+
 # Create the Gradio interface
 iface = gr.Interface(
     fn=main,

@@ -116,7 +116,7 @@ def array_to_img(arr):
     img = Image.fromarray(np.uint8(arr*255))
     return img
 
-
+        
 # build a ImageDataGenerator
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 
@@ -183,7 +183,7 @@ def img_data_generator(data, bs, img_dir, train_mode=True, version = 1): #replac
 # Build a prediction class
 class FacePrediction(object):
 
-    def __init__(self, img_dir=None, model_type='vgg16'):
+    def __init__(self, img_dir, model_type='vgg16'):
         self.model_type = model_type
         self.img_dir = img_dir
         self.detector = MTCNN()
@@ -314,17 +314,101 @@ class FacePrediction(object):
                 # No faces detected, return the original image
                 return img_input_path
 
-    def predict_external(self, img_input_dir, input_df=None, image_width=244, image_height=244, batch_size=32, show_img=False):
+
+#     def predict_external(self, img_input_dir, input_df=None, image_width=244, image_height=244, batch_size=32, show_img=False):
+#         if os.path.isdir(img_input_dir) and input_df is not None:
+#             # Predict using the data generator
+#             test_df = input_df
+#             processed_img_paths = [self.process_input_image(i) for i in test_df['path']]
+#             processed_img_names = [i.split('/')[-1] for i in processed_img_paths]
+#             processed_img_dir = '/'.join(processed_img_paths[0].split('/')[:-1])
+#             test_df['processed_paths'], test_df['processed_names'] = processed_img_paths, processed_img_names
+            
+
+#             # Load the test data with target data
+#             test_set_gen = test_datagen.flow_from_dataframe(
+#                 test_df,
+#                 directory = img_input_dir,
+#                 x_col='name',
+#                 y_col='bmi',
+#                 target_size=(image_width, image_height),
+#                 batch_size=batch_size,
+#                 color_mode='rgb',
+#                 class_mode='raw')
+
+#             preds = self.model.predict_generator(test_set_gen)
+
+#             if show_img and (test_df is not None):
+#                 bmi = preds
+#                 num_plots = len(test_df['path'])
+#                 ncols = 5
+#                 nrows = int((num_plots - 0.1) // ncols + 1)
+#                 fig, axs = plt.subplots(nrows, ncols)
+#                 fig.set_size_inches(3 * ncols, 3 * nrows)
+#                 for i, img_path in enumerate(test_df['path']):
+#                     col = i % ncols
+#                     row = i // ncols
+#                     img = plt.imread(img_path)
+#                     axs[row, col].imshow(img)
+#                     axs[row, col].axis('off')
+#                     axs[row, col].set_title('BMI: {:3.1f}'.format(bmi[i, 0], fontsize=10))
+#             return preds
+
+#         else:
+#             # Single image input
+#             single_test_path = self.process_input_image(img_input_dir)
+#             single_test_gen = single_test_generator(single_test_path)
+
+#             if show_img:
+#                 img_path = img_input_dir
+#                 img = plt.imread(single_test_path)
+#                 fig, ax = plt.subplots()
+#                 ax.imshow(img)
+#                 ax.axis('off')
+#                 preds = self.model.predict_generator(single_test_gen)
+#                 ax.set_title('BMI: {:3.1f}'.format(preds[0, 0], fontsize=10))
+#                 plt.show()
+
+#             preds = self.model.predict_generator(single_test_gen)
+#             return preds
+
+
+    def predict_external(self, img_input_dir, input_df=None, show_img=False):
         if os.path.isdir(img_input_dir) and input_df is not None:
-            # Predict using the data generator
+            assert not os.path.isdir(img_input_dir), "Input should be a path, not a directory"
+
+        else:
+            # Single image input
+            single_test_path = self.process_input_image(img_input_dir)
+            single_test_gen = single_test_generator(single_test_path)
+
+            if show_img:
+                img_path = img_input_dir
+                img = plt.imread(single_test_path)
+                fig, ax = plt.subplots()
+                ax.imshow(img)
+                ax.axis('off')
+                preds = self.model.predict_generator(single_test_gen)
+                ax.set_title('BMI: {:3.1f}'.format(preds[0, 0], fontsize=10))
+                plt.show()
+
+            preds = self.model.predict_generator(single_test_gen)
+            return preds
+
+
+    def predict_external_dir(self, img_input_dir, input_df=None, show_img=False):
+        '''
+        This function deals with mutiple input, because when input data is affected when importing data with datagen.from_dataframe() compared to .from_flow
+        '''
+        if os.path.isdir(img_input_dir) and input_df is not None:
+            # Crop the images and makde a temporary df & dir
             test_df = input_df
             processed_img_paths = [self.process_input_image(i) for i in test_df['path']]
             processed_img_names = [i.split('/')[-1] for i in processed_img_paths]
             processed_img_dir = '/'.join(processed_img_paths[0].split('/')[:-1])
             test_df['processed_paths'], test_df['processed_names'] = processed_img_paths, processed_img_names
-            
 
-            # Load the test data with target data
+            # Make prediction
             test_set_gen = test_datagen.flow_from_dataframe(
                 test_df,
                 directory = img_input_dir,
@@ -352,25 +436,6 @@ class FacePrediction(object):
                     axs[row, col].axis('off')
                     axs[row, col].set_title('BMI: {:3.1f}'.format(bmi[i, 0], fontsize=10))
             return preds
-
-        else:
-            # Single image input
-            single_test_path = self.process_input_image(img_input_dir)
-            single_test_gen = single_test_generator(single_test_path)
-
-            if show_img:
-                img_path = img_input_dir
-                img = plt.imread(single_test_path)
-                fig, ax = plt.subplots()
-                ax.imshow(img)
-                ax.axis('off')
-                preds = self.model.predict_generator(single_test_gen)
-                ax.set_title('BMI: {:3.1f}'.format(preds[0, 0], fontsize=10))
-                plt.show()
-
-            preds = self.model.predict_generator(single_test_gen)
-            return preds
-
 
 
     def predict(self, img_input_dir, input_generator=None, input_df=None, show_img=False):
